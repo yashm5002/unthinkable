@@ -3,7 +3,11 @@ const { Pool } = pkg;
 
 // Use a fallback for local development if DATABASE_URL is not set, 
 // though it will throw an error if no DB is available.
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/postgres';
+const connectionString = 
+  process.env.STORAGE_POSTGRES_URL || 
+  process.env.POSTGRES_URL || 
+  process.env.DATABASE_URL || 
+  'postgresql://postgres:postgres@localhost:5432/postgres';
 
 const pool = new Pool({
   connectionString,
