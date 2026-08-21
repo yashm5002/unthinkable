@@ -58,6 +58,9 @@ export default function HistoryView({ history, onClear }) {
                   </span>
                 </div>
                 <div className="flex flex-col gap-1.5 items-end flex-shrink-0">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700">
+                    {item.length || 'LONG'}
+                  </span>
 
                   {item.isFallback && (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700">

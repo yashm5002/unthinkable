@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function SummaryView({ data, length, onLengthChange, onReset, isFallback }) {
-  const { summary, summaryParagraphs, keyPoints } = data;
+  const { summary, summaryParagraphs, keyPoints, improvementSuggestions } = data;
   
   // Backwards compatibility if old API response is cached
   const paragraphs = summaryParagraphs || [summary];
@@ -21,6 +21,27 @@ export default function SummaryView({ data, length, onLengthChange, onReset, isF
             </span>
           )}
         </h2>
+        
+        {!isFallback && onLengthChange && (
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-slate-500">Length:</span>
+            <div className="flex bg-slate-200 p-1 rounded-lg">
+              {['short', 'medium', 'long'].map(option => (
+                <button
+                  key={option}
+                  onClick={() => onLengthChange(option)}
+                  className={`px-4 py-1.5 text-sm font-semibold rounded-md capitalize transition-all duration-200 ${
+                    length === option 
+                      ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-900/5' 
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-300/50'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -87,6 +108,34 @@ export default function SummaryView({ data, length, onLengthChange, onReset, isF
                     </details>
                   ))}
                 </div>
+              </div>
+            </section>
+          )}
+
+          {/* Improvement Suggestions Section */}
+          {improvementSuggestions && improvementSuggestions.length > 0 && (
+            <section>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-amber-100 p-2 rounded-lg shadow-sm">
+                  <svg className="w-5 h-5 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-slate-800 tracking-tight">Improvement Suggestions</h3>
+              </div>
+              <div className="bg-slate-50/80 rounded-xl p-6 md:p-8 border border-slate-100 shadow-inner">
+                <ul className="space-y-4">
+                  {improvementSuggestions.map((suggestion, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span className="text-slate-700 text-[1.05rem] leading-relaxed">
+                        {suggestion}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </section>
           )}

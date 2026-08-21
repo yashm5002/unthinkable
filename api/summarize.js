@@ -65,17 +65,14 @@ export default async function handler(req, res) {
   }
 
   const wordCounts = {
+    short: 'about 50-75 words',
+    medium: 'about 150-200 words',
     long: 'about 300-400 words'
   };
-  
-  const dynamicMaxTokens = 2500;
-  
-  // Force length to be 'long' regardless of request
-  const effectiveLength = 'long';
 
-  const systemPrompt = `You are a professional document summarizer. 
-Your task is to summarize the provided text.
-Produce a ${wordCounts[effectiveLength]} summary.
+  const systemPrompt = `You are a professional document summarizer and analyst. 
+Your task is to summarize and analyze the provided text.
+Produce a ${wordCounts[length]} summary.
 You MUST return your response as a valid JSON object with EXACTLY this structure:
 {
   "summaryParagraphs": ["First short paragraph...", "Second short paragraph..."],
@@ -84,32 +81,40 @@ You MUST return your response as a valid JSON object with EXACTLY this structure
       "title": "Short title of the point",
       "details": "A 1-2 sentence deeper explanation of this specific point."
     }
+  ],
+  "improvementSuggestions": [
+    "Suggestion 1 on how the document's clarity, tone, or content could be improved.",
+    "Suggestion 2..."
   ]
 }
-Break the summary into 2-3 highly readable paragraphs. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object.`;
+Break the summary into highly readable paragraphs. Never return one massive block of text. Ensure you highlight the key points and main ideas.`;
 
   try {
-    // 5. Call Groq API Chat Completions Endpoint
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    // 5. Call Gemini API endpoint
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ error: 'GEMINI_API_KEY not configured.', fallback: true });
+    }
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-27b', // User requested Qwen model
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY valid JSON. Do not wrap it in \`\`\`json markdown blocks. Start directly with { and end with }.` }
-        ],
-        temperature: 0.3,
-        max_tokens: dynamicMaxTokens
+        contents: [{
+          parts: [{ text: `${systemPrompt}\n\nHere is the text:\n\n${safeText}` }]
+        }],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: "application/json"
+        }
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Groq API Error:', errorData);
+      console.error('Gemini API Error:', errorData);
       return res.status(502).json({ 
         error: `Failed to generate summary from LLM: ${errorData?.error?.message || 'Unknown error'}`, 
         fallback: true 
@@ -117,9 +122,14 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+    
+    // Gemini returns text inside data.candidates[0].content.parts[0].text
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) {
+      throw new Error("No content returned from Gemini API");
+    }
 
-    // 6. Parse JSON safely by searching backwards for any valid schema
+    // 6. Parse JSON safely (Gemini usually returns clean JSON due to responseMimeType, but we keep our robust parser just in case)
     let parsed = null;
     try {
       // Scan backwards from the end of the text to find the last valid JSON object
@@ -127,7 +137,6 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
         if (content[i] === '}') {
           let openBraces = 0;
           let firstBrace = -1;
-          // Walk backward to find the balanced '{'
           for (let j = i; j >= 0; j--) {
             if (content[j] === '}') openBraces++;
             if (content[j] === '{') openBraces--;
@@ -141,20 +150,19 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
             const potentialJson = content.substring(firstBrace, i + 1);
             try {
               const obj = JSON.parse(potentialJson);
-              // Validate schema
               if (obj && obj.summaryParagraphs && Array.isArray(obj.summaryParagraphs)) {
                 parsed = obj;
-                break; // Found our valid JSON, stop searching!
+                break;
               }
             } catch (e) {
-              // Not valid JSON or parsing failed, ignore and keep searching
+              // Ignore parse errors, keep searching
             }
           }
         }
       }
 
       if (!parsed) {
-        throw new Error("No JSON object found. The model may have run out of tokens while thinking.");
+        throw new Error("No JSON object found.");
       }
     } catch (err) {
       console.error('Failed to parse LLM JSON:', err, 'Content:', content);
