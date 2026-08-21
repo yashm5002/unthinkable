@@ -70,6 +70,13 @@ export default async function handler(req, res) {
     long: 'about 300-400 words'
   };
 
+  const maxTokensMap = {
+    short: 1800,
+    medium: 2200,
+    long: 2500
+  };
+  const dynamicMaxTokens = maxTokensMap[length] || 2500;
+
   const systemPrompt = `You are a professional document summarizer and analyst. 
 Your task is to summarize and analyze the provided text.
 Produce a ${wordCounts[length]} summary.
@@ -90,44 +97,45 @@ You MUST return your response as a valid JSON object with EXACTLY this structure
 Break the summary into highly readable paragraphs. Never return one massive block of text. Ensure you highlight the key points and main ideas.`;
 
   try {
-    // 5. Call Gemini API endpoint
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return res.status(503).json({ error: 'GEMINI_API_KEY not configured.', fallback: true });
+    // 5. Call Hugging Face API Endpoint
+    const hfToken = process.env.HF_TOKEN;
+    if (!hfToken) {
+      return res.status(503).json({ error: 'HF_TOKEN not configured.', fallback: true });
     }
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`, {
+    // Using Hugging Face's OpenAI-compatible Chat Completions API
+    const response = await fetch('https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey
+        'Authorization': `Bearer ${hfToken}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{ text: `${systemPrompt}\n\nHere is the text:\n\n${safeText}` }]
-        }],
-        generationConfig: {
-          temperature: 0.3,
-          responseMimeType: "application/json"
-        }
+        model: 'meta-llama/Meta-Llama-3-8B-Instruct',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY valid JSON. Do not wrap it in \`\`\`json markdown blocks. Start directly with { and end with }.` }
+        ],
+        temperature: 0.3,
+        max_tokens: dynamicMaxTokens
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('Gemini API Error:', errorData);
+      console.error('Hugging Face API Error:', errorData);
       return res.status(502).json({ 
-        error: `Failed to generate summary from LLM: ${errorData?.error?.message || 'Unknown error'}`, 
+        error: `Failed to generate summary from LLM: ${errorData?.error || errorData?.message || 'Unknown error'}`, 
         fallback: true 
       });
     }
 
     const data = await response.json();
     
-    // Gemini returns text inside data.candidates[0].content.parts[0].text
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    // Extract content matching OpenAI spec format
+    const content = data.choices?.[0]?.message?.content;
     if (!content) {
-      throw new Error("No content returned from Gemini API");
+      throw new Error("No content returned from Hugging Face API");
     }
 
     // 6. Parse JSON safely (Gemini usually returns clean JSON due to responseMimeType, but we keep our robust parser just in case)
