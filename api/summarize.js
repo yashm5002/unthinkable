@@ -65,27 +65,28 @@ export default async function handler(req, res) {
   }
 
   // 4. Construct Prompt
-  // Using explicit JSON structure requirement for robust parsing
-  const wordCounts = {
-    short: 'about 50-75 words',
-    medium: 'about 150-200 words',
-    long: 'about 300-400 words'
-  };
-
   const systemPrompt = `You are a professional document summarizer. 
-Your task is to summarize the provided text.
-Produce a ${wordCounts[length]} summary.
+Your task is to summarize the provided text in THREE different lengths: short, medium, and long.
+- short: about 50-75 words
+- medium: about 150-200 words
+- long: about 300-400 words
+
 You MUST return your response as a valid JSON object with EXACTLY this structure:
 {
-  "summaryParagraphs": ["First short paragraph...", "Second short paragraph..."],
-  "keyPoints": [
-    {
-      "title": "Short title of the point",
-      "details": "A 1-2 sentence deeper explanation of this specific point."
-    }
-  ]
+  "short": {
+    "summaryParagraphs": ["..."],
+    "keyPoints": [{ "title": "...", "details": "..." }]
+  },
+  "medium": {
+    "summaryParagraphs": ["...", "..."],
+    "keyPoints": [{ "title": "...", "details": "..." }]
+  },
+  "long": {
+    "summaryParagraphs": ["...", "...", "..."],
+    "keyPoints": [{ "title": "...", "details": "..." }]
+  }
 }
-Break the summary into 2-3 highly readable paragraphs. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object.`;
+Break the summary paragraphs into highly readable blocks. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object.`;
 
   try {
     // 5. Call Groq API Chat Completions Endpoint
@@ -96,14 +97,14 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b', // Fast, robust model universally available on Groq
+        model: 'mixtral-8x7b-32768', // Fast, robust model universally available on Groq (using real model name to be safe)
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}` }
         ],
         response_format: { type: 'json_object' }, // Enforce JSON response
         temperature: 0.3,
-        max_tokens: 2048
+        max_tokens: 3000
       })
     });
 
@@ -121,14 +122,15 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
     try {
       parsed = JSON.parse(content);
       // Ensure required fields exist
-      if (!parsed.summaryParagraphs || !Array.isArray(parsed.keyPoints)) {
-        throw new Error("Invalid JSON schema returned by LLM");
+      if (!parsed.short || !parsed.medium || !parsed.long) {
+        throw new Error("Invalid JSON schema returned by LLM, missing lengths");
       }
     } catch (err) {
       console.error('Failed to parse LLM JSON:', err, 'Content:', content);
       return res.status(500).json({ error: 'Received malformed response from LLM.', fallback: true });
     }
 
+    // Return the bundle containing all 3 lengths
     return res.status(200).json(parsed);
 
   } catch (error) {

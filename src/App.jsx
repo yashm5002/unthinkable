@@ -159,11 +159,21 @@ export default function App() {
         throw new Error(data.error || 'Failed to generate summary.');
       }
 
-      setSummaryData(data);
-      setSessionCache(prev => ({ ...prev, [length]: { data, isFallback: false } }));
+      // The API now returns a bundle of { short, medium, long }
+      const newCache = {
+        short: { data: data.short, isFallback: false },
+        medium: { data: data.medium, isFallback: false },
+        long: { data: data.long, isFallback: false },
+      };
+      
+      setSessionCache(newCache);
+      setSummaryData(data[length]); // Render the currently selected length
       setIsFallback(false);
       setStatus('success');
-      saveToHistory(data, length, filename, false);
+      
+      // Save just the selected length to history, or save the medium one as default?
+      // For simplicity, just save the one they requested right now.
+      saveToHistory(data[length], length, filename, false);
     } catch (err) {
       console.error("Network or API Error:", err);
       if (err.message.includes("Session expired")) {
