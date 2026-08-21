@@ -9,8 +9,13 @@ const connectionString =
   process.env.DATABASE_URL || 
   'postgresql://postgres:postgres@localhost:5432/postgres';
 
+// Remove sslmode query parameter to prevent it from overriding our custom SSL config
+const url = new URL(connectionString);
+url.searchParams.delete('sslmode');
+const cleanConnectionString = url.toString();
+
 const pool = new Pool({
-  connectionString,
+  connectionString: cleanConnectionString,
   // Required for Vercel Postgres and most managed DBs (Neon, Supabase, etc.)
   ssl: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1' ? {
     rejectUnauthorized: false
