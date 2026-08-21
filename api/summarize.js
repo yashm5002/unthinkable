@@ -97,7 +97,7 @@ Break the summary paragraphs into highly readable blocks. Never return one massi
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'llama3-8b-8192', // Much higher rate limits on Groq free tier (30,000 TPM)
+        model: 'openai/gpt-oss-120b', // User requested model
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}` }
