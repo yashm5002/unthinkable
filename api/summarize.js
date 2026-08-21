@@ -74,9 +74,9 @@ export default async function handler(req, res) {
   // Dynamically allocate just enough tokens based on the requested length 
   // so (Input + max_tokens) stays extremely low, allowing back-to-back requests
   const maxTokensMap = {
-    short: 500,
-    medium: 800,
-    long: 1200
+    short: 1800,
+    medium: 2200,
+    long: 2500
   };
   const dynamicMaxTokens = maxTokensMap[length] || 1000;
 
