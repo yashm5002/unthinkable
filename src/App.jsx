@@ -152,28 +152,23 @@ export default function App() {
 
       if (!response.ok) {
         if (data.fallback) {
-          console.warn("API requested fallback. Using offline summarizer.");
+          console.warn(`API requested fallback. Using offline summarizer. Reason: ${data.error}`);
           triggerOfflineFallback(text, length, filename);
           return;
         }
         throw new Error(data.error || 'Failed to generate summary.');
       }
 
-      // The API now returns a bundle of { short, medium, long }
-      const newCache = {
-        short: { data: data.short, isFallback: false },
-        medium: { data: data.medium, isFallback: false },
-        long: { data: data.long, isFallback: false },
-      };
-      
-      setSessionCache(newCache);
-      setSummaryData(data[length]); // Render the currently selected length
+      // The API now returns a single summary for the requested length
+      setSessionCache(prev => ({
+        ...prev,
+        [length]: { data, isFallback: false }
+      }));
+      setSummaryData(data); // Render the currently selected length
       setIsFallback(false);
       setStatus('success');
       
-      // Save just the selected length to history, or save the medium one as default?
-      // For simplicity, just save the one they requested right now.
-      saveToHistory(data[length], length, filename, false);
+      saveToHistory(data, length, filename, false);
     } catch (err) {
       console.error("Network or API Error:", err);
       if (err.message.includes("Session expired")) {

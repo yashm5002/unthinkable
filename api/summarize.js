@@ -65,26 +65,19 @@ export default async function handler(req, res) {
   }
 
   // 4. Construct Prompt
+  const lengthGuides = {
+    short: 'about 50-75 words',
+    medium: 'about 150-200 words',
+    long: 'about 300-400 words'
+  };
+
   const systemPrompt = `You are a professional document summarizer. 
-Your task is to summarize the provided text in THREE different lengths: short, medium, and long.
-- short: about 50-75 words
-- medium: about 150-200 words
-- long: about 300-400 words
+Your task is to summarize the provided text in a ${length} length (${lengthGuides[length]}).
 
 You MUST return your response as a valid JSON object with EXACTLY this structure:
 {
-  "short": {
-    "summaryParagraphs": ["..."],
-    "keyPoints": [{ "title": "...", "details": "..." }]
-  },
-  "medium": {
-    "summaryParagraphs": ["...", "..."],
-    "keyPoints": [{ "title": "...", "details": "..." }]
-  },
-  "long": {
-    "summaryParagraphs": ["...", "...", "..."],
-    "keyPoints": [{ "title": "...", "details": "..." }]
-  }
+  "summaryParagraphs": ["..."],
+  "keyPoints": [{ "title": "...", "details": "..." }]
 }
 Break the summary paragraphs into highly readable blocks. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object.`;
 
@@ -97,7 +90,8 @@ Break the summary paragraphs into highly readable blocks. Never return one massi
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-120b', // User requested model
+        model: 'openai/gpt-oss-20b', // Updated to valid replacement model
+
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}` }
@@ -111,7 +105,10 @@ Break the summary paragraphs into highly readable blocks. Never return one massi
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('Groq API Error:', errorData);
-      return res.status(502).json({ error: 'Failed to generate summary from LLM.', fallback: true });
+      return res.status(502).json({ 
+        error: `Failed to generate summary from LLM: ${errorData?.error?.message || 'Unknown error'}`, 
+        fallback: true 
+      });
     }
 
     const data = await response.json();
@@ -122,15 +119,15 @@ Break the summary paragraphs into highly readable blocks. Never return one massi
     try {
       parsed = JSON.parse(content);
       // Ensure required fields exist
-      if (!parsed.short || !parsed.medium || !parsed.long) {
-        throw new Error("Invalid JSON schema returned by LLM, missing lengths");
+      if (!parsed.summaryParagraphs) {
+        throw new Error("Invalid JSON schema returned by LLM, missing summaryParagraphs");
       }
     } catch (err) {
       console.error('Failed to parse LLM JSON:', err, 'Content:', content);
       return res.status(500).json({ error: 'Received malformed response from LLM.', fallback: true });
     }
 
-    // Return the bundle containing all 3 lengths
+    // Return the summary object
     return res.status(200).json(parsed);
 
   } catch (error) {
