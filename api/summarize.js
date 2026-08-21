@@ -121,19 +121,20 @@ CRITICAL INSTRUCTIONS:
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    // 6. Parse JSON safely (Handle markdown wrappers and conversational prefixes)
+    // 6. Parse JSON safely, stripping out <think> tags or conversational filler
     let parsed;
     try {
-      // Find the first { and the last }
-      const startIndex = content.indexOf('{');
-      const endIndex = content.lastIndexOf('}');
+      let cleanContent = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+      const firstBrace = cleanContent.indexOf('{');
+      const lastBrace = cleanContent.lastIndexOf('}');
       
-      if (startIndex === -1 || endIndex === -1) {
+      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+        cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
+      } else {
         throw new Error("No JSON object found in response");
       }
       
-      const cleanJsonStr = content.substring(startIndex, endIndex + 1);
-      parsed = JSON.parse(cleanJsonStr);
+      parsed = JSON.parse(cleanContent);
       
       // Ensure required fields exist
       if (!parsed.summaryParagraphs) {
