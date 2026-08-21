@@ -97,14 +97,14 @@ You MUST return your response as a valid JSON object with EXACTLY this structure
 Break the summary into highly readable paragraphs. Never return one massive block of text. Ensure you highlight the key points and main ideas.`;
 
   try {
-    // 5. Call Hugging Face API Endpoint
+    // 5. Call Hugging Face API Endpoint (Using updated router infrastructure)
     const hfToken = process.env.HF_TOKEN;
     if (!hfToken) {
       return res.status(503).json({ error: 'HF_TOKEN not configured.', fallback: true });
     }
 
-    // Using Hugging Face's OpenAI-compatible Chat Completions API
-    const response = await fetch('https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct/v1/chat/completions', {
+    // Hugging Face now uses an OpenAI-compatible /v1/chat/completions endpoint
+    const response = await fetch('https://router.huggingface.co/hf-inference/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${hfToken}`,
@@ -125,7 +125,7 @@ Break the summary into highly readable paragraphs. Never return one massive bloc
       const errorData = await response.json().catch(() => ({}));
       console.error('Hugging Face API Error:', errorData);
       return res.status(502).json({ 
-        error: `Failed to generate summary from LLM: ${errorData?.error || errorData?.message || 'Unknown error'}`, 
+        error: `Failed to generate summary from LLM: ${errorData?.error?.message || errorData?.message || errorData?.error || 'Unknown error'}`, 
         fallback: true 
       });
     }
