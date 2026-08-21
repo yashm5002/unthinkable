@@ -126,38 +126,42 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    // 6. Parse JSON safely, handling unclosed <think> tags and extracting balanced braces
-    let parsed;
+    // 6. Parse JSON safely by searching backwards for any valid schema
+    let parsed = null;
     try {
-      // Strip <think> blocks entirely (even if unclosed due to token limits)
-      let cleanContent = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
-      
-      // Find the LAST balanced JSON object in the remaining text
-      let firstBrace = -1;
-      let lastBrace = cleanContent.lastIndexOf('}');
-      
-      if (lastBrace !== -1) {
-        let openBraces = 0;
-        for (let i = lastBrace; i >= 0; i--) {
-          if (cleanContent[i] === '}') openBraces++;
-          if (cleanContent[i] === '{') openBraces--;
-          if (openBraces === 0) {
-            firstBrace = i;
-            break;
+      // Scan backwards from the end of the text to find the last valid JSON object
+      for (let i = content.length - 1; i >= 0; i--) {
+        if (content[i] === '}') {
+          let openBraces = 0;
+          let firstBrace = -1;
+          // Walk backward to find the balanced '{'
+          for (let j = i; j >= 0; j--) {
+            if (content[j] === '}') openBraces++;
+            if (content[j] === '{') openBraces--;
+            if (openBraces === 0) {
+              firstBrace = j;
+              break;
+            }
+          }
+          
+          if (firstBrace !== -1) {
+            const potentialJson = content.substring(firstBrace, i + 1);
+            try {
+              const obj = JSON.parse(potentialJson);
+              // Validate schema
+              if (obj && obj.summaryParagraphs && Array.isArray(obj.summaryParagraphs)) {
+                parsed = obj;
+                break; // Found our valid JSON, stop searching!
+              }
+            } catch (e) {
+              // Not valid JSON or parsing failed, ignore and keep searching
+            }
           }
         }
       }
-      
-      if (firstBrace !== -1 && lastBrace !== -1) {
-        cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
-        parsed = JSON.parse(cleanContent);
-      } else {
+
+      if (!parsed) {
         throw new Error("No JSON object found. The model may have run out of tokens while thinking.");
-      }
-      
-      // Ensure required fields exist
-      if (!parsed.summaryParagraphs) {
-        throw new Error("Invalid JSON schema returned by LLM, missing summaryParagraphs");
       }
     } catch (err) {
       console.error('Failed to parse LLM JSON:', err, 'Content:', content);
