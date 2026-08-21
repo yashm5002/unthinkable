@@ -111,7 +111,7 @@ Break the summary into highly readable paragraphs. Never return one massive bloc
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'Qwen/Qwen2.5-72B-Instruct',
+        model: 'Qwen/Qwen2.5-7B-Instruct',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY valid JSON. Do not wrap it in \`\`\`json markdown blocks. Start directly with { and end with }.` }
