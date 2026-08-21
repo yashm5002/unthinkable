@@ -25,6 +25,7 @@ export default function App() {
   const [summaryLength, setSummaryLength] = useState('medium');
   const [error, setError] = useState(null);
   const [isFallback, setIsFallback] = useState(false);
+  const [sessionCache, setSessionCache] = useState({});
   
   // History specific state
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
@@ -77,6 +78,7 @@ export default function App() {
     setIsFallback(false);
     setSelectedHistoryItem(null);
     setIsMobileMenuOpen(false);
+    setSessionCache({});
   };
 
   const handleFileSelect = async (selectedFile) => {
@@ -96,6 +98,7 @@ export default function App() {
       }
 
       setExtractedText(text);
+      setSessionCache({});
       await fetchSummary(text, summaryLength, selectedFile.name);
       
     } catch (err) {
@@ -157,6 +160,7 @@ export default function App() {
       }
 
       setSummaryData(data);
+      setSessionCache(prev => ({ ...prev, [length]: { data, isFallback: false } }));
       setIsFallback(false);
       setStatus('success');
       saveToHistory(data, length, filename, false);
@@ -176,6 +180,7 @@ export default function App() {
       setIsFallback(true);
       const data = generateOfflineSummary(text, length);
       setSummaryData(data);
+      setSessionCache(prev => ({ ...prev, [length]: { data, isFallback: true } }));
       setStatus('success');
       saveToHistory(data, length, filename, true);
     } catch (fallbackErr) {
@@ -187,7 +192,12 @@ export default function App() {
   const handleLengthChange = (newLength) => {
     setSummaryLength(newLength);
     if (extractedText && !selectedHistoryItem) {
-      if (isFallback) {
+      if (sessionCache[newLength]) {
+        // Use cached response instantly without API call or History save
+        setSummaryData(sessionCache[newLength].data);
+        setIsFallback(sessionCache[newLength].isFallback);
+        setStatus('success');
+      } else if (isFallback) {
         triggerOfflineFallback(extractedText, newLength);
       } else {
         fetchSummary(extractedText, newLength);
