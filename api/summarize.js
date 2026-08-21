@@ -74,9 +74,9 @@ export default async function handler(req, res) {
   // Dynamically allocate just enough tokens based on the requested length 
   // so (Input + max_tokens) stays extremely low, allowing back-to-back requests
   const maxTokensMap = {
-    short: 300,
-    medium: 600,
-    long: 1000
+    short: 500,
+    medium: 800,
+    long: 1200
   };
   const dynamicMaxTokens = maxTokensMap[length] || 1000;
 
@@ -93,8 +93,7 @@ You MUST return your response as a valid JSON object with EXACTLY this structure
     }
   ]
 }
-Break the summary into 2-3 highly readable paragraphs. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object. 
-CRITICAL: You are running in a severely constrained token environment. DO NOT output long <think> blocks. Output the JSON object immediately.`;
+Break the summary into 2-3 highly readable paragraphs. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object.`;
 
   try {
     // 5. Call Groq API Chat Completions Endpoint
@@ -105,11 +104,12 @@ CRITICAL: You are running in a severely constrained token environment. DO NOT ou
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b', // Fast, robust model universally available on Groq
+        model: 'qwen/qwen3.6-27b', // User requested Qwen model
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Ensure all quotes inside text are escaped.` }
+          { role: 'user', content: `Here is the text:\n\n${safeText}` }
         ],
+        response_format: { type: 'json_object' }, // We can safely restore strict JSON enforcement
         temperature: 0.3,
         max_tokens: dynamicMaxTokens
       })
