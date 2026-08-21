@@ -3,7 +3,7 @@
 
 import jwt from 'jsonwebtoken';
 
-const MAX_TEXT_LENGTH = 8000; // Capped at ~2000 tokens to allow multiple requests within the 8000 TPM limit
+const MAX_TEXT_LENGTH = 5000; // Capped aggressively at ~1200 tokens to easily allow back-to-back requests within the 8000 TPM limit
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 
 // Extremely basic in-memory rate limiter for demo purposes
@@ -74,9 +74,9 @@ export default async function handler(req, res) {
   // Dynamically allocate just enough tokens based on the requested length 
   // so (Input + max_tokens) stays extremely low, allowing back-to-back requests
   const maxTokensMap = {
-    short: 600,
-    medium: 1000,
-    long: 1600
+    short: 300,
+    medium: 600,
+    long: 1000
   };
   const dynamicMaxTokens = maxTokensMap[length] || 1000;
 
