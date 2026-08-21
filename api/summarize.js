@@ -104,8 +104,9 @@ CRITICAL INSTRUCTIONS:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Ensure all quotes inside text are escaped.` }
         ],
+        response_format: { type: 'json_object' }, // Enforce JSON response
         temperature: 0.3,
-        max_tokens: 1500
+        max_tokens: 4096
       })
     });
 
@@ -121,20 +122,34 @@ CRITICAL INSTRUCTIONS:
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    // 6. Parse JSON safely, stripping out <think> tags or conversational filler
+    // 6. Parse JSON safely, handling unclosed <think> tags and extracting balanced braces
     let parsed;
     try {
-      let cleanContent = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-      const firstBrace = cleanContent.indexOf('{');
-      const lastBrace = cleanContent.lastIndexOf('}');
+      // Strip <think> blocks entirely (even if unclosed due to token limits)
+      let cleanContent = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '').trim();
       
-      if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
-        cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
-      } else {
-        throw new Error("No JSON object found in response");
+      // Find the LAST balanced JSON object in the remaining text
+      let firstBrace = -1;
+      let lastBrace = cleanContent.lastIndexOf('}');
+      
+      if (lastBrace !== -1) {
+        let openBraces = 0;
+        for (let i = lastBrace; i >= 0; i--) {
+          if (cleanContent[i] === '}') openBraces++;
+          if (cleanContent[i] === '{') openBraces--;
+          if (openBraces === 0) {
+            firstBrace = i;
+            break;
+          }
+        }
       }
       
-      parsed = JSON.parse(cleanContent);
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        cleanContent = cleanContent.substring(firstBrace, lastBrace + 1);
+        parsed = JSON.parse(cleanContent);
+      } else {
+        throw new Error("No JSON object found. The model may have run out of tokens while thinking.");
+      }
       
       // Ensure required fields exist
       if (!parsed.summaryParagraphs) {
