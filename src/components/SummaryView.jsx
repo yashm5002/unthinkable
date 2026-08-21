@@ -21,25 +21,6 @@ export default function SummaryView({ data, length, onLengthChange, onReset, isF
             </span>
           )}
         </h2>
-        
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-slate-500">Length:</span>
-          <div className="flex bg-slate-200 p-1 rounded-lg">
-            {['short', 'long'].map(option => (
-              <button
-                key={option}
-                onClick={() => onLengthChange(option)}
-                className={`px-4 py-1.5 text-sm font-semibold rounded-md capitalize transition-all duration-200 ${
-                  length === option 
-                    ? 'bg-white text-indigo-600 shadow-sm ring-1 ring-slate-900/5' 
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-300/50'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Content */}

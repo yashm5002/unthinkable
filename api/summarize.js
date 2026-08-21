@@ -64,25 +64,18 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'GROQ_API_KEY not configured.', fallback: true });
   }
 
-  // Using explicit JSON structure requirement for robust parsing
   const wordCounts = {
-    short: 'about 50-75 words',
-    medium: 'about 150-200 words',
     long: 'about 300-400 words'
   };
-
-  // Dynamically allocate just enough tokens based on the requested length 
-  // so (Input + max_tokens) stays extremely low, allowing back-to-back requests
-  const maxTokensMap = {
-    short: 1800,
-    medium: 2200,
-    long: 2500
-  };
-  const dynamicMaxTokens = maxTokensMap[length] || 1000;
+  
+  const dynamicMaxTokens = 2500;
+  
+  // Force length to be 'long' regardless of request
+  const effectiveLength = 'long';
 
   const systemPrompt = `You are a professional document summarizer. 
 Your task is to summarize the provided text.
-Produce a ${wordCounts[length]} summary.
+Produce a ${wordCounts[effectiveLength]} summary.
 You MUST return your response as a valid JSON object with EXACTLY this structure:
 {
   "summaryParagraphs": ["First short paragraph...", "Second short paragraph..."],
