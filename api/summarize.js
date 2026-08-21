@@ -96,10 +96,11 @@ Break the summary into highly readable paragraphs. Never return one massive bloc
       return res.status(503).json({ error: 'GEMINI_API_KEY not configured.', fallback: true });
     }
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
       },
       body: JSON.stringify({
         contents: [{
