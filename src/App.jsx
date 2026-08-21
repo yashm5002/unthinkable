@@ -22,7 +22,7 @@ export default function App() {
   const [progress, setProgress] = useState(null);
   const [extractedText, setExtractedText] = useState('');
   const [summaryData, setSummaryData] = useState(null);
-  const [summaryLength, setSummaryLength] = useState('medium');
+  const [summaryLength, setSummaryLength] = useState('short');
   const [error, setError] = useState(null);
   const [isFallback, setIsFallback] = useState(false);
   const [sessionCache, setSessionCache] = useState({});

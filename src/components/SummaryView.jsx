@@ -25,7 +25,7 @@ export default function SummaryView({ data, length, onLengthChange, onReset, isF
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-slate-500">Length:</span>
           <div className="flex bg-slate-200 p-1 rounded-lg">
-            {['short', 'medium', 'long'].map(option => (
+            {['short', 'long'].map(option => (
               <button
                 key={option}
                 onClick={() => onLengthChange(option)}

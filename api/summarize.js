@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   }
 
   // 2. Input Validation
-  const { text, length = 'medium' } = req.body;
+  const { text, length = 'short' } = req.body;
 
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ error: 'Valid text input is required.' });
@@ -67,7 +67,6 @@ export default async function handler(req, res) {
   // 4. Construct Prompt
   const lengthGuides = {
     short: 'about 50-75 words',
-    medium: 'about 150-200 words',
     long: 'about 300-400 words'
   };
 
