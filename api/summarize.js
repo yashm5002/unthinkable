@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   }
 
   // 2. Input Validation
-  const { text, length = 'short' } = req.body;
+  const { text, length = 'long' } = req.body;
 
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ error: 'Valid text input is required.' });
@@ -86,7 +86,8 @@ CRITICAL INSTRUCTIONS:
 2. Return ONLY the raw JSON object.
 3. DO NOT wrap the output in markdown blocks (e.g. \`\`\`json).
 4. DO NOT include any conversational text before or after the JSON.
-5. The output must begin exactly with '{' and end exactly with '}'.`;
+5. The output must begin exactly with '{' and end exactly with '}'.
+6. Ensure all JSON strings are properly escaped. Do not use unescaped double quotes inside strings.`;
 
   try {
     // 5. Call Groq API Chat Completions Endpoint
@@ -97,13 +98,12 @@ CRITICAL INSTRUCTIONS:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b', // Updated to valid replacement model
+        model: 'qwen/qwen3.6-27b', // Switch to Qwen which has superior JSON generation for long outputs
 
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Do NOT include markdown formatting or conversational text.` }
+          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Ensure all quotes inside text are escaped.` }
         ],
-        response_format: { type: 'json_object' }, // Enforce JSON response
         temperature: 0.3,
         max_tokens: 1500
       })
@@ -121,10 +121,20 @@ CRITICAL INSTRUCTIONS:
     const data = await response.json();
     const content = data.choices[0].message.content;
 
-    // 6. Parse JSON safely
+    // 6. Parse JSON safely (Handle markdown wrappers and conversational prefixes)
     let parsed;
     try {
-      parsed = JSON.parse(content);
+      // Find the first { and the last }
+      const startIndex = content.indexOf('{');
+      const endIndex = content.lastIndexOf('}');
+      
+      if (startIndex === -1 || endIndex === -1) {
+        throw new Error("No JSON object found in response");
+      }
+      
+      const cleanJsonStr = content.substring(startIndex, endIndex + 1);
+      parsed = JSON.parse(cleanJsonStr);
+      
       // Ensure required fields exist
       if (!parsed.summaryParagraphs) {
         throw new Error("Invalid JSON schema returned by LLM, missing summaryParagraphs");

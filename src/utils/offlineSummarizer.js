@@ -2,7 +2,7 @@
  * Fallback Summarizer using Term Frequency (TF-IDF inspired) logic.
  * Used when the Groq API is unavailable or unconfigured, ensuring the app never fully breaks.
  */
-export const generateOfflineSummary = (text, length = 'short') => {
+export const generateOfflineSummary = (text, length = 'long') => {
   // 1. Clean and split text into sentences
   // A simple regex to split by periods, exclamation marks, or question marks.
   const sentenceRegex = /[^.!?]+[.!?]+/g;
