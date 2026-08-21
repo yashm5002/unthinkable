@@ -57,12 +57,7 @@ export default async function handler(req, res) {
   // Trim text defensively to avoid exceeding model context window or timing out
   const safeText = text.substring(0, MAX_TEXT_LENGTH);
 
-  // 3. Environment Check
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey || apiKey === 'your_key_here') {
-    // Signal to the frontend to use the offline fallback gracefully
-    return res.status(503).json({ error: 'GROQ_API_KEY not configured.', fallback: true });
-  }
+
 
   const wordCounts = {
     short: 'about 50-75 words',
@@ -104,14 +99,14 @@ Break the summary into highly readable paragraphs. Never return one massive bloc
     }
 
     // Hugging Face now uses an OpenAI-compatible /v1/chat/completions endpoint
-    const response = await fetch('https://router.huggingface.co/hf-inference/v1/chat/completions', {
+    const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${hfToken}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'Qwen/Qwen2.5-7B-Instruct',
+        model: 'Qwen/Qwen2.5-7B-Instruct:fastest',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY valid JSON. Do not wrap it in \`\`\`json markdown blocks. Start directly with { and end with }.` }
