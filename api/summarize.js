@@ -3,7 +3,7 @@
 
 import jwt from 'jsonwebtoken';
 
-const MAX_TEXT_LENGTH = 12000; // Cap input (approx 3000 tokens) to avoid LLM token limits
+const MAX_TEXT_LENGTH = 12000; // Reduced to free up context window for the model's output
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 
 // Extremely basic in-memory rate limiter for demo purposes
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
   }
 
   // 2. Input Validation
-  const { text, length = 'long' } = req.body;
+  const { text, length = 'medium' } = req.body;
 
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ error: 'Valid text input is required.' });
@@ -65,29 +65,28 @@ export default async function handler(req, res) {
   }
 
   // 4. Construct Prompt
-  const lengthGuides = {
+  // Using explicit JSON structure requirement for robust parsing
+  const wordCounts = {
     short: 'about 50-75 words',
+    medium: 'about 150-200 words',
     long: 'about 300-400 words'
   };
 
   const systemPrompt = `You are a professional document summarizer. 
-Your task is to summarize the provided text in a ${length} length (${lengthGuides[length]}).
-
-Respond ONLY with a valid JSON object matching this exact schema:
+Your task is to summarize the provided text.
+Produce a ${wordCounts[length]} summary.
+You MUST return your response as a valid JSON object with EXACTLY this structure:
 {
-  "summaryParagraphs": ["string", "string"],
+  "summaryParagraphs": ["First short paragraph...", "Second short paragraph..."],
   "keyPoints": [
-    { "title": "string", "details": "string" }
+    {
+      "title": "Short title of the point",
+      "details": "A 1-2 sentence deeper explanation of this specific point."
+    }
   ]
 }
-
-CRITICAL INSTRUCTIONS:
-1. Break the summary paragraphs into highly readable blocks.
-2. Return ONLY the raw JSON object.
-3. DO NOT wrap the output in markdown blocks (e.g. \`\`\`json).
-4. DO NOT include any conversational text before or after the JSON.
-5. The output must begin exactly with '{' and end exactly with '}'.
-6. Ensure all JSON strings are properly escaped. Do not use unescaped double quotes inside strings.`;
+Break the summary into 2-3 highly readable paragraphs. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object. 
+CRITICAL: You are running in a severely constrained token environment. DO NOT output long <think> blocks. Output the JSON object immediately.`;
 
   try {
     // 5. Call Groq API Chat Completions Endpoint
@@ -98,15 +97,13 @@ CRITICAL INSTRUCTIONS:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'qwen/qwen3.6-27b', // Switch to Qwen which has superior JSON generation for long outputs
-
+        model: 'openai/gpt-oss-20b', // Fast, robust model universally available on Groq
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Ensure all quotes inside text are escaped.` }
         ],
-        response_format: { type: 'json_object' }, // Enforce JSON response
         temperature: 0.3,
-        max_tokens: 4096
+        max_tokens: 8192
       })
     });
 
