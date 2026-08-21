@@ -17,7 +17,7 @@ _A privacy-first web application that extracts document text entirely in the bro
 
 <br/>
 
-**[Live Demo](https://docusumm.vercel.app)** &nbsp;|&nbsp; **[Quick Start](#quick-start-local-development)** &nbsp;|&nbsp; **[Architecture](#architecture--tech-stack)** &nbsp;|&nbsp; **[Engineering Notes](#engineering-decisions--approach)**
+**[Live Demo](https://unthinkable-red.vercel.app/)** &nbsp;|&nbsp; **[Quick Start](#quick-start-local-development)** &nbsp;|&nbsp; **[Architecture](#architecture--tech-stack)** &nbsp;|&nbsp; **[Engineering Notes](#engineering-decisions--approach)**
 
 </div>
 
