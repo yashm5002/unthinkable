@@ -3,7 +3,7 @@
 
 import jwt from 'jsonwebtoken';
 
-const MAX_TEXT_LENGTH = 20000; // Cap input to avoid LLM token limits/abuse
+const MAX_TEXT_LENGTH = 12000; // Cap input (approx 3000 tokens) to avoid LLM token limits
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 
 // Extremely basic in-memory rate limiter for demo purposes
@@ -97,14 +97,14 @@ Break the summary paragraphs into highly readable blocks. Never return one massi
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'mixtral-8x7b-32768', // Fast, robust model universally available on Groq (using real model name to be safe)
+        model: 'llama3-8b-8192', // Much higher rate limits on Groq free tier (30,000 TPM)
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Here is the text:\n\n${safeText}` }
         ],
         response_format: { type: 'json_object' }, // Enforce JSON response
         temperature: 0.3,
-        max_tokens: 3000
+        max_tokens: 1500
       })
     });
 
