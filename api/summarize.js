@@ -73,12 +73,20 @@ export default async function handler(req, res) {
   const systemPrompt = `You are a professional document summarizer. 
 Your task is to summarize the provided text in a ${length} length (${lengthGuides[length]}).
 
-You MUST return your response as a valid JSON object with EXACTLY this structure:
+Respond ONLY with a valid JSON object matching this exact schema:
 {
-  "summaryParagraphs": ["..."],
-  "keyPoints": [{ "title": "...", "details": "..." }]
+  "summaryParagraphs": ["string", "string"],
+  "keyPoints": [
+    { "title": "string", "details": "string" }
+  ]
 }
-Break the summary paragraphs into highly readable blocks. Never return one massive block of text. Do not include any other text, markdown blocks, or explanation outside the JSON object.`;
+
+CRITICAL INSTRUCTIONS:
+1. Break the summary paragraphs into highly readable blocks.
+2. Return ONLY the raw JSON object.
+3. DO NOT wrap the output in markdown blocks (e.g. \`\`\`json).
+4. DO NOT include any conversational text before or after the JSON.
+5. The output must begin exactly with '{' and end exactly with '}'.`;
 
   try {
     // 5. Call Groq API Chat Completions Endpoint
@@ -93,7 +101,7 @@ Break the summary paragraphs into highly readable blocks. Never return one massi
 
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the text:\n\n${safeText}` }
+          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Do NOT include markdown formatting or conversational text.` }
         ],
         response_format: { type: 'json_object' }, // Enforce JSON response
         temperature: 0.3,
