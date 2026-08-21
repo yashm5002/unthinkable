@@ -3,7 +3,7 @@
 
 import jwt from 'jsonwebtoken';
 
-const MAX_TEXT_LENGTH = 12000; // Reduced to free up context window for the model's output
+const MAX_TEXT_LENGTH = 8000; // Capped at ~2000 tokens to allow multiple requests within the 8000 TPM limit
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_for_dev_only';
 
 // Extremely basic in-memory rate limiter for demo purposes
@@ -64,13 +64,21 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'GROQ_API_KEY not configured.', fallback: true });
   }
 
-  // 4. Construct Prompt
   // Using explicit JSON structure requirement for robust parsing
   const wordCounts = {
     short: 'about 50-75 words',
     medium: 'about 150-200 words',
     long: 'about 300-400 words'
   };
+
+  // Dynamically allocate just enough tokens based on the requested length 
+  // so (Input + max_tokens) stays extremely low, allowing back-to-back requests
+  const maxTokensMap = {
+    short: 600,
+    medium: 1000,
+    long: 1600
+  };
+  const dynamicMaxTokens = maxTokensMap[length] || 1000;
 
   const systemPrompt = `You are a professional document summarizer. 
 Your task is to summarize the provided text.
@@ -103,7 +111,7 @@ CRITICAL: You are running in a severely constrained token environment. DO NOT ou
           { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY a valid JSON object matching the requested schema. Ensure all quotes inside text are escaped.` }
         ],
         temperature: 0.3,
-        max_tokens: 8192
+        max_tokens: dynamicMaxTokens
       })
     });
 
