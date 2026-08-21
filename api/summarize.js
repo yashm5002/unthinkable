@@ -107,9 +107,8 @@ Break the summary into 2-3 highly readable paragraphs. Never return one massive 
         model: 'qwen/qwen3.6-27b', // User requested Qwen model
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the text:\n\n${safeText}` }
+          { role: 'user', content: `Here is the text:\n\n${safeText}\n\nIMPORTANT: Output ONLY valid JSON. Do not wrap it in \`\`\`json markdown blocks. Start directly with { and end with }.` }
         ],
-        response_format: { type: 'json_object' }, // We can safely restore strict JSON enforcement
         temperature: 0.3,
         max_tokens: dynamicMaxTokens
       })
